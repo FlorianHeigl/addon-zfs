@@ -32,8 +32,10 @@ Password-less ssh access to an OpenNebula ZFS host. (eg. localhost)
 
 The oneadmin user should be able to execute ZFS related command with sudo passwordlessly.
 
-* Password-less sudo permission for: `zfs` and `dd`.
+* Password-less sudo permission for: `zfs` and `dd`. <-- I found that I also needed to unlock some others (ln, rm, chown). It seems to be related to the links in the  system datastore. In my case I could only succeed with a "ALL".
+Can you comment if zfs and dd were really all?
 * `oneadmin` needs to belong to the `disk` group (for KVM).
+
 
 ## Limitations
 
@@ -45,8 +47,14 @@ There are some limitations that you have to consider, though:
 
 To install the driver you have to copy these files:
 
-* `datastore/zfs` --> `/var/lib/one/remotes/datastore/zfs`
-* `tm/zfs` --> `/var/lib/one/remotes/tm/zfs`
+* `datastore/zfs` 
+> `/var/lib/one/remotes/datastore/zfs`<-- i would just put code
+* `tm/zfs` --> `/var/lib/one/remotes/tm/zfs`<--i would just put code
+
+Alternative A: any downside to a code block with command here?   
+Alternative B: it should have a little install.sh, but the .conf file would need to be edited.
+I was a bit confused since some things worked without it. is it really designed to be needed - it appears to rather set defaults.
+
 
 ## Configuration
 
@@ -67,17 +75,21 @@ The first step to create a ZFS datastore is to set up a template file for it. In
 | `TM_MAD`            | Must be `zfs`                                                                                                                                                        |
 | `DISK_TYPE`         | Must be `block`                                                                                                                                                      |
 | `BRIDGE_LIST`       | The zfs server host. Defaults to `localhost`                                                                                                                         |
-| `DATASET_NAME`      | The top level dataset name under which all volumes are created. Defaults to `rpool/ONE/images`                                                                       |
+| `DATASET_NAME`      | The top level dataset name under which all volumes are created. Defaults to `rpool/ONE/images`<-- "The pre-existing..."                                                                      |
 | `ZFS_CMD`           | Path to the zfs binary. Defaults to `/usr/sbin/zfs`                                                                                                                  |
-| `RESTRICTED_DIRS`   | Paths that can not be used to register images. A space separated list of paths. (1)                                                                                  |
+| `RESTRICTED_DIRS`   | Paths that can not be used to register images. A space separated list of paths. (1) <-- Seems to default to /                                                                                 |
 | `SAFE_DIRS`         | If you need to un-block a directory under one of the RESTRICTED_DIRS. A space separated list of paths.                                                               |
-| `NO_DECOMPRESS`     | Do not try to untar or decompress the file to be registered. Useful for specialized Transfer Managers                                                                |
+| `NO_DECOMPRESS`     | Do not try to untar or decompress the file to be registered. Useful for specialized Transfer Managers <-- The table of attributes is nice, but i.e. what/what to do with the `NO_DECOMPRESS` setting ... anything w/re ZFS?
+                                                             |
 | `LIMIT_TRANSFER_BW` | Specify the maximum transfer rate in bytes/second when downloading images from a http/https URL. Suffixes K, M or G can be used.                                     |
 
 
 > (1) This will prevent users registering important files as VM images and accessing them through their VMs. OpenNebula will automatically add its configuration directories: /var/lib/one, /etc/one and oneadmin's home. If users try to register an image from a restricted directory, they will get the following error message: “Not allowed to copy image file”.
 
 For example, the following examples illustrates the creation of an ZFS datastore using a configuration file. In this case we will use the host `localhost` as ZFS-enabled host.
+
+<-- Is this config file meant to exist?    
+is it the .conf from datastores/zfs/zfs.conf (they are pretty compatible in syntax) or is the example defining what's the minimal parameters for creating a working DS - or is it just an example but the resulting datastore would not be sufficient for everyday use?
 
 ~~~~
 > cat ds.conf
@@ -165,7 +177,7 @@ The ZFS transfer driver will create volume with zfs. Once the zvol is available,
 
 The host must have ZFS and have the dataset used in the `DATASET` attributed of the datastore template. 
 
-It’s also required to have password-less sudo permission for `zfs` and `dd`.
+It’s also required to have password-less sudo permission for `zfs` and `dd`. <-- already mentioned at start, makes less likely to get it right if there's two places. this seems the better one. but it is confuzzling.
 
 ## Tuning & Extending
 
@@ -173,10 +185,10 @@ System administrators and integrators are encouraged to modify these drivers in 
 
 Under ``/var/lib/one/remotes/``:
 
--  **datastore/zfs/zfs.conf**: Default values for LVM parameters
+-  **datastore/zfs/zfs.conf**: Default values for LVM parameters <-- ZFS parameters
 
-   -  ZFS_CMD: Path to the zfs binary
-   -  BRIDGE_LIST: The zfs server host
+   -  ZFS_CMD: Path to the zfs binary <-- would try to add autodetection if in PATH
+   -  BRIDGE_LIST: The zfs server host <-- how will it work with multiple nodes (say each has one DS)
    -  DATASET_NAME: Default dataset
    -  STAGING_DIR: Staging directory
 
@@ -189,7 +201,7 @@ Under ``/var/lib/one/remotes/``:
 
 ## Optimizations
 
-* Due [this issue](https://github.com/zfsonlinux/zfs/issues/824) use more large values of `volblocksize`.
-* Also you may to turn on the writeback cache or set `io` to `native`
+* Due [this issue](https://github.com/zfsonlinux/zfs/issues/824) use more large values of `volblocksize`. <-- what did you set, what should people set, the thing reads AS IF it had been solved in '14 but your advice is later in time, issue still exists? doesn't ZFS autohandle it?
+* Also you may to turn on the writeback cache or set `io` to `native` <-- s/io/aio/?
 
 
